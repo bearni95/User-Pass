@@ -45,7 +45,7 @@ let pass = argon2(password, {salt : hashedUsername})
 `user` and `pass` will now be used to derive our beloved wallet:
 
 ```javascript
-let salt = shake128(user + pass + 'salt')
+let salt = shake128(user + pass + 'static_salt')
 let userpass = argon2(user + pass, {salt})
 ```
 
