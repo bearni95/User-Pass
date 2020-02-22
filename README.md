@@ -7,7 +7,8 @@ npm install
 
 ## Running
 ```bash
-node index.js
+node examples/iota-wallet.js
+node examples/ethereum-wallet.js
 ```
 
 
