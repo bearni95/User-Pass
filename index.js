@@ -1,45 +1,64 @@
 const argon2 = require('argon2')
-const { argon2i, argon2d, argon2id, defaults, limits } = argon2
+const argon2id = argon2.argon2id
 const shake128 = require('js-sha3').shake128
-const Base64 = require('js-base64').Base64
+const EthWallet = require('ethereumjs-wallet')
+const core = require('@iota/core')
+const converter = require('@iota/converter')
 
-var strongRegex = new RegExp("^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#\$%\^&\*])(?=.{8,})")
-const emailRegex =   /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+class UserPass {
+  constructor (){
+    this.SALT_LENGTH = 512
+    this.INTERNAL_LENGTH = 2048
+    this.PRIVATE_KEY_LENGTH = 256
+  }
 
-const main = async () => {
-	let username = 'johndoe@gmail.com'
-	let password = 'Q1w2e3r4!'
+  async generateEthereumWallet(username, password){
+    const privateKey = await this.generatePrivateKey(username, password)
+    const wallet = EthWallet.fromPrivateKey(Buffer.from(privateKey, 'hex'))
+    return wallet
+  }
 
-	if (!emailRegex.test(username)){
-		throw new Error('Username must be a valid email')
-	}
-	if (!strongRegex.test(password)){
-		throw new Error('Password strength is not enough. The password must contain, at least, 1 lowercase letter, 1 uppercase letter, 1 numeric character, 1 special character and be 8 characters long')
-	}
+  async generateIotaWallet(username, password, idx=0){
+    const privateKey = await this.generatePrivateKey(username, password, 324)
+    const trytes = converter.asciiToTrytes(privateKey)
+    const address = core.generateAddress(trytes, idx )
+    return {
+      privateKey: trytes,
+      address
+    }
+  }
 
+  async generatePrivateKey(username, password, length=256){
+    const hashedUsername = this.hash(username, this.SALT_LENGTH)
+    const hashedPassword = this.hash(password, this.SALT_LENGTH)
 
-	console.log('username', username)
-	console.log('password', password)
+    const user = await this.argon2(username, hashedPassword, this.INTERNAL_LENGTH)
+    const pass = await this.argon2(password, hashedUsername, this.INTERNAL_LENGTH)
 
-	let hashedUsername = Buffer.from(shake128(username, 512), 'hex')
-	let hashedPassword = Buffer.from(shake128(password, 512), 'hex')
+    const salt = this.hash(user + pass + 'USERPASS', this.SALT_LENGTH)
 
-	console.log('hashedUsername', hashedUsername.toString('hex'))
-	console.log('hashedPassword', hashedPassword.toString('hex'))
+    const privateKey = await this.argon2((user + pass), salt, length)
 
-	let user = shake128(await argon2.hash(username, {salt : hashedPassword, type: argon2id}), 2048)
-	let pass = shake128(await argon2.hash(password, {salt : hashedUsername, type: argon2id}), 2048)
+    return privateKey
+  }
 
-	console.log('user', user)
-	console.log('pass', pass)
+  hash (input, length) {
+    return shake128(input, length)
+  }
 
-	let salt = Buffer.from(shake128(user + pass + 'salt', 512), 'hex')
-	let userpass = shake128(await argon2.hash(user + pass, {salt, type: argon2id}), 2048)
-
-	console.log('userpass', userpass)
-
-	let privateKey = shake128(userpass, 256)
-	console.log('privateKey', privateKey)
+  argon2 (input, salt, length=2048) {
+    return new Promise((resolve, reject) => {
+      argon2.hash(input, {
+        salt: Buffer.from(salt, 'hex'),
+        time: 10,
+        type: argon2id
+      })
+      .then(res => {
+        resolve(shake128(res, length))
+      })
+      .catch(reject)
+    })
+  }
 }
 
-main()
+module.exports = new UserPass()

@@ -35,6 +35,7 @@ We'll be creating a private key for our user `jdoe` with password `123456`
 let username = 'jdoe'
 let password = '123456'
 
+
 let hashedUsername = shake128(username, 512)
 let hashedPassword = shake128(password, 512)
 
@@ -49,10 +50,20 @@ let salt = shake128(user + pass + 'static_salt')
 let userpass = argon2(user + pass, {salt})
 ```
 
-You got your UserPass! Let's turn it into a wallet:
+You got your UserPass!
+
+Let's turn that into an Iota wallet:
+```javascript
+const trytes = iotaConverter.asciiToTrytes(userpass)
+// this is your private key or seed
+const address = iotaCore.generateAddress(trytes, 0)
+// this is the public address where you can receive funds
+
+```
+Or into an Ethereum wallet:
 
 ```javascript
-let privateKey = shake128(userpass, 256)
+// this is your private key
+const wallet = EthereumjsWallet.fromPrivateKey(Buffer.from(userpass, 'hex'))
+// this is your fully flexed Ethereum wallet
 ```
-
-Now that is your Ethereum private key!
