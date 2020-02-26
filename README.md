@@ -1,5 +1,5 @@
 # UserPass
-
+![alt text](./logo.png "UserPass")
 ## Installation
 ```bash
 npm install
