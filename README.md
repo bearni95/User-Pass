@@ -1,5 +1,9 @@
 # UserPass
 ![alt text](./logo.png "UserPass")
+
+## Introduction
+Want an overview of the project without all the technical mambo-jumbo? Take a look at our beautiful [one pager](./one-pager.pdf).
+
 ## Installation
 ```bash
 npm install
